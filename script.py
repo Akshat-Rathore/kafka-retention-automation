@@ -114,7 +114,7 @@ def webhook():
     print('Received alert:', data)
     if data['receiver']=="Mem_Alert":
         statDisplay()
-        util(status)
+        controller(status)
         # statDisplay()
     return 'OK'  # Respond with a 200 OK status
 
