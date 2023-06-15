@@ -1,1 +1,18 @@
 # kafka-retention-automation
+
+:toc:
+:toc-placement!:
+
+This repository demonstrates how to use Prometheus and Grafana for monitoring an Apache Kafka cluster.
+
+toc::[]
+
+== Stack
+
+* Kafka (Confluent)
+* Zookeeper
+* Kafka Schema Registry (Confluent)
+* KSQLDB
+* Kafka Connect
+* Prometheus
+* Grafana
