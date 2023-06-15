@@ -3,7 +3,7 @@
 :toc:
 :toc-placement!:
 
-This repository demonstrates the automation of Kafka topic retebtion time based on alerts from Grafana server, using Prometheus as a datasource.
+This repository demonstrates the automation of Kafka topic retention time, based on alerts from Grafana server, using Prometheus as a datasource.
 
 toc::[]
 
