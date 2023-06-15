@@ -3,16 +3,51 @@
 :toc:
 :toc-placement!:
 
-This repository demonstrates how to use Prometheus and Grafana for monitoring an Apache Kafka cluster.
+This repository demonstrates the automation of Kafka topic retebtion time based on alerts from Grafana server, using Prometheus as a datasource.
 
 toc::[]
 
 == Stack
 
-* Kafka (Confluent)
+* Kafka
 * Zookeeper
-* Kafka Schema Registry (Confluent)
-* KSQLDB
-* Kafka Connect
 * Prometheus
 * Grafana
+* Flask
+* kafkta-python
+* confluent-kafka
+
+
+== Getting Started
+
+**1. Clone the repository.**
+
+[source,bash]
+----
+$ git clone https://github.com/Akshat-Rathore/kafka-retention-automation.git
+$ cd kafka-retention-automation
+----
+
+**2. Start the cluster.**
+
+Deploy the provided docker-compose stack:
+
+_Note: Depending on your network speed, this may take few minutes to download all images._
+
+Start/Stop with:
+
+[source,bash]
+----
+$ chmod +x start.sh stop.sh
+$ ./start.sh
+$ ./stop.sh
+----
+
+**2. Start the (flask) server.**
+
+
+[source,bash]
+----
+$ pip install -r requirements.txt
+$ python script.py
+----
