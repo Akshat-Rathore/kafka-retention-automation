@@ -4,8 +4,28 @@ from confluent_kafka import TopicPartition,Consumer
 from rich import print
 import kafka
 import docker
-
+import datetime
+from concurrent.futures import ThreadPoolExecutor
 app = Flask(__name__)
+from operator import itemgetter
+def get_partition_size(topic_name: str, partition_key: int):
+    topic_partition = TopicPartition(topic_name, partition_key)
+    low_offset, high_offset = cons.get_watermark_offsets(topic_partition)
+    partition_size = high_offset - low_offset
+    return partition_size
+
+def get_topic_size(topic_name: str):
+    topic = cons.list_topics(topic=topic_name)
+    partitions = topic.topics[topic_name].partitions
+    workers, max_workers = [], len(partitions) or 1
+
+    with ThreadPoolExecutor(max_workers=max_workers) as e:
+        for partition_key in list(topic.topics[topic_name].partitions.keys()):
+            job = e.submit(get_partition_size, topic_name, partition_key)
+            workers.append(job)
+
+    topic_size = sum([w.result() for w in workers])
+    return topic_size
 
 #compl : O(#(groups))
 def calcCurrentOffset():
@@ -21,7 +41,7 @@ def calcCurrentOffset():
         for topic in topic_dict:
             index = topic.topic + "|"+str(topic.partition)
             current_offset[group][index]=topic_dict[topic].offset
-    print(current_offset)
+    # print(current_offset)
     return current_offset
 
 #compl : O(#(partitions))
@@ -40,27 +60,40 @@ def calcEndOffeset():
     for p in checkPart:
         indexer = p.topic + "|"+str(p.partition)
         ml[indexer]=consumer.get_watermark_offsets(p)[1]
-    print(ml)
+    # print(ml)
     # Close the consumer
     consumer.close()
     return ml
+
+def checkLag(lag,partition,topic,curPos):
+    consumer = kafka.KafkaConsumer(topic, bootstrap_servers=bootstrap_servers, enable_auto_commit=True)    
+    # consumer.poll()
+    tp  = kafka.TopicPartition(topic,int(partition) )
+    mapping = consumer.offsets_for_times({tp:delT.timestamp()*1000})
+    consumer.close()
+    if(mapping[tp]!=None):
+        offset = mapping[tp].offset
+        c = curPos - offset #messages consumed by consumer in the last delT
+        if(c>lag):
+            return True
+    return False
 
 def calcLag(cur,end):
     topic_lags={}
     for topic in topics:
         topic_lags[topic]=True
     for group, offset in cur.items():
-        for partition,val in offset.items():
-            lag = end[partition]-val
+        for partition,curPos in offset.items():
+            lag = end[partition]-curPos
             topic = partition.split('|')[0]
-            print(group,partition,lag)
-            if lag!=0:
-                topic_lags[topic]=False
+            part = partition.split('|')[1]
+            # print(group,partition,lag)
+            topic_lags[topic]=checkLag(lag,part, topic,curPos) | lag==0
     ntopics = []
     for topic,deletable in topic_lags.items():
         if deletable:
             ntopics.append(topic)
-    print(topic_lags)
+    # print(topic_lags)
     return ntopics
 
 def setRt(topic,newRet):
@@ -79,6 +112,9 @@ def getTopics():
     endOffset = calcEndOffeset()
     currOffeset = calcCurrentOffset()
     topics = calcLag(currOffeset,endOffset)
+    topicSize = [(topic,get_topic_size(topic)) for topic in topics]
+    topicSize=sorted(topicSize,key=itemgetter(1),reverse=True)
+    print(topicSize)
     return topics
     
 def controller(status):
@@ -124,7 +160,8 @@ if __name__ == '__main__':
     consumer = kafka.KafkaConsumer( bootstrap_servers=['localhost:9092'])
     topics=list(consumer.topics())
     consumer.close()
-    
+    delT = datetime.datetime.now()-datetime.timedelta(hours=10)
+    cons = Consumer({"bootstrap.servers": bootstrap_servers, "group.id": "temp"})
     app.run(host='0.0.0.0', port=5000)
 
 # make c groups, all fine: reduce 1 hr 
